@@ -1,0 +1,32 @@
+# --- CMake build directory ---
+build/
+
+# --- VS Code ---
+.vscode/
+CMakeUserPresets.json
+CMakeCache.txt
+
+# --- Compiled binaries ---
+*.exe
+*.dll
+*.so
+*.dylib
+
+# --- Object files ---
+*.o
+*.obj
+
+# --- Precompiled headers ---
+*.gch
+*.pch
+
+# --- Logs / temp files ---
+*.log
+*.tmp
+
+# --- Images generated during testing ---
+*.ppm
+
+# --- Backup files ---
+*~
+*.bak
