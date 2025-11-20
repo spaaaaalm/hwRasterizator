@@ -3,7 +3,7 @@
 #include "mathTypes/matrix.h"
 
 struct PhongShader : public IShader {
-    // Эти матрицы должны быть установлены извне
+    
     Mat4 Model;
     Mat4 View;
     Mat4 Projection;
@@ -13,18 +13,18 @@ struct PhongShader : public IShader {
     Vec3f lightPos = {0,0,2};
     Vec3f cameraPos = {0,0,2};
 
-    // varying-переменные (по 3 значения на треугольник)
+    // varying-переменные
     Vec3f varying_world_pos[3];
     Vec3f varying_normal[3];
     Vec4f varying_clip[3];
 
-    // Вершины модели (передаются извне)
+  
     Vec3f *positions = nullptr;
     Vec3f *normals   = nullptr;
 
     PhongShader() {}
 
-    // iface=номер треугольника, ivertex=0..2
+    // ivertex=0..2
     Vec4f vertex(int iface, int ivertex) override {
         Vec3f pos = positions[iface*3 + ivertex];
         Vec3f nor = normals[iface*3 + ivertex].normalize();
@@ -40,7 +40,7 @@ struct PhongShader : public IShader {
     }
 
     bool fragment(const Vec3f &bar, Color &color) override {
-        // Интерполяция позиций и нормалей
+        // Интерполяция 
         Vec3f world_pos =
               varying_world_pos[0] * bar.x +
               varying_world_pos[1] * bar.y +
@@ -57,7 +57,6 @@ struct PhongShader : public IShader {
         Vec3f V = (cameraPos - world_pos).normalize();
         Vec3f R = (N * (2.0f * (N * L)) - L).normalize(); // отражённый луч
 
-        // Компоненты освещения
         float ambient  = 0.15f;
         float diffuse  = std::max(0.0f, N * L);
         float specular = pow(std::max(0.0f, R * V), 32.0f);
@@ -69,6 +68,6 @@ struct PhongShader : public IShader {
         uint8_t c = uint8_t(255 * intensity);
         color = Color(c, c, c);
 
-        return false; // рисуем пиксель
+        return false; 
     }
 };
