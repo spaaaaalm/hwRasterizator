@@ -24,69 +24,59 @@ inline Vec3f barycentric_fast(const Vec3f *pts, const Vec3f &P) {
     return {w, u, v}; // corresponds to weights for pts[0], pts[1], pts[2]
 }
 
-// triangle: clip space -> rasterize
-inline void triangle(const Vec4f clip[3], IShader &shader, Image &frame, std::vector<float> &zbuffer) {
-    int width = frame.width;
-    int height = frame.height;
+void triangle(Vec4f clip[3], IShader &shader, Image &image, std::vector<float> &zbuf) {
+    const int W = image.width;
+    const int H = image.height;
 
-    // Convert clip -> NDC (divide by w)
+    // === perspective divide ===
     Vec3f ndc[3];
-    float inv_w[3];
-    for (int i = 0; i < 3; ++i) {
-        if (std::fabs(clip[i].w) < 1e-9f) {
-            ndc[i] = {0,0,0};
-            inv_w[i] = 1e9f;
-        } else {
-            inv_w[i] = 1.0f / clip[i].w;
-            ndc[i] = { clip[i].x * inv_w[i], clip[i].y * inv_w[i], clip[i].z * inv_w[i] };
-        }
+    for (int i = 0; i < 3; i++) {
+        float w = clip[i].w;
+        ndc[i] = { clip[i].x / w, clip[i].y / w, clip[i].z / w };
     }
 
-    // Screen coordinates
-    Vec3f screen[3];
-    for (int i = 0; i < 3; ++i) {
-        float x = (ndc[i].x + 1.0f) * 0.5f * (float)width;
-        float y = (ndc[i].y + 1.0f) * 0.5f * (float)height;
-        // note: image origin at top-left; we keep same orientation (y increases downward)
-        screen[i] = { x, y, ndc[i].z };
+    // === viewport transform ===
+    Vec3f pts[3];
+    for (int i = 0; i < 3; i++) {
+        pts[i].x = int((ndc[i].x + 1.f) * 0.5f * W);
+        pts[i].y = int((ndc[i].y + 1.f) * 0.5f * H);
+        pts[i].z = 0.f;
     }
 
-    // Bounding box in integer pixel coords
-    int minx = std::max(0, (int)std::floor(std::min({screen[0].x, screen[1].x, screen[2].x})));
-    int maxx = std::min(width-1, (int)std::ceil (std::max({screen[0].x, screen[1].x, screen[2].x})));
-    int miny = std::max(0, (int)std::floor(std::min({screen[0].y, screen[1].y, screen[2].y})));
-    int maxy = std::min(height-1, (int)std::ceil (std::max({screen[0].y, screen[1].y, screen[2].y})));
+    // bounding box
+    int minx = W-1, miny = H-1;
+    int maxx = 0,    maxy = 0;
+    for (int i = 0; i < 3; i++) {
+        minx = std::max(0, std::min(minx, int(pts[i].x)));
+        miny = std::max(0, std::min(miny, int(pts[i].y)));
+        maxx = std::min(W-1, std::max(maxx, int(pts[i].x)));
+        maxy = std::min(H-1, std::max(maxy, int(pts[i].y)));
+    }
 
-    // Iterate pixels in bbox
-    Vec3f P;
-    for (int y = miny; y <= maxy; ++y) {
-        for (int x = minx; x <= maxx; ++x) {
-            P.x = (float)x + 0.5f; // center of pixel
-            P.y = (float)y + 0.5f;
-            // compute barycentric in screen space
-            Vec3f bc = barycentric_fast(screen, P);
-            if (bc.x < -1e-4f || bc.y < -1e-4f || bc.z < -1e-4f) continue; // outside
+    // rasterization
+    for (int y = miny; y <= maxy; y++) {
+        for (int x = minx; x <= maxx; x++) {
 
-            // Perspective-correct weights:
-            float w0 = bc.x * inv_w[0];
-            float w1 = bc.y * inv_w[1];
-            float w2 = bc.z * inv_w[2];
-            float wsum = w0 + w1 + w2;
-            if (wsum == 0.0f) continue;
-            Vec3f bar = { w0 / wsum, w1 / wsum, w2 / wsum }; // corrected barycentrics for fragment shader
+            Vec3f bc = barycentric_fast(pts, Vec3f{float(x), float(y), 0.f});
+            if (bc.x < 0 || bc.y < 0 || bc.z < 0) continue;
 
-            // Interpolated depth (we use ndc.z with perspective correction)
-            float depth = (ndc[0].z * (bc.x * inv_w[0]) + ndc[1].z * (bc.y * inv_w[1]) + ndc[2].z * (bc.z * inv_w[2])) / wsum;
+            float z = 1.0f / (bc.x / clip[0].w + bc.y / clip[1].w + bc.z / clip[2].w);
+            float w0 = bc.x / clip[0].w;
+            float w1 = bc.y / clip[1].w;
+            float w2 = bc.z / clip[2].w;
+            float w_sum = w0 + w1 + w2;
+            Vec3f bc_correct = { w0 / w_sum, w1 / w_sum, w2 / w_sum };
 
-            int idx = y * width + x;
-            // zbuffer initial values should be very small (we expect depth usually in [-1..1], nearer = bigger)
-            if (depth <= zbuffer[idx]) continue;
-            // call fragment shader
+            float z_clip = clip[0].z * bc_correct.x + clip[1].z * bc_correct.y + clip[2].z * bc_correct.z;
+            float z_ndc = z_clip / z;
+
+            int index = x + y * W;
+            if (z_clip > zbuf[index]) continue;
+            zbuf[index] = z_clip;
+            
             Color color;
-            bool discard = shader.fragment(bar, color);
-            if (!discard) {
-                zbuffer[idx] = depth;
-                frame.setPixel(x, y, color);
+            if (!shader.fragment(bc_correct, color)) {
+                image.setPixel(x, y, color);
             }
         }
     }
