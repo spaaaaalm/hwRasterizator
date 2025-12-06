@@ -29,9 +29,9 @@ struct Mat4 {
     }
 
     static Mat4 lookAt(const Vec3f &eye, const Vec3f &center, const Vec3f &up) {
-        Vec3f z = (eye - center).normalize();     // forward
-        Vec3f x = (up.cross(z)).normalize();      // right
-        Vec3f y = (z.cross(x)).normalize();       // up-orthogonal
+        Vec3f z = (eye - center).normalize(); // forward
+        Vec3f x = (up.cross(z)).normalize(); // right
+        Vec3f y = (z.cross(x)).normalize(); //up
 
         Mat4 M = Mat4::identity();
 
@@ -60,5 +60,14 @@ struct Mat4 {
         return P;
     }
 
-    
+    static Mat4 rotateY(float angle) {
+        Mat4 r;
+        float c = cosf(angle);
+        float s = sinf(angle);
+        r.m[0][0] = c;  r.m[0][2] = s;
+        r.m[2][0] = -s; r.m[2][2] = c;
+        r.m[1][1] = 1;
+        r.m[3][3] = 1;
+        return r;
+    }
 };

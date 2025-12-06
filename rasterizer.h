@@ -7,10 +7,8 @@
 #include "mathTypes/image.h"
 
 
-
-// Более надёжная barycentric (через векторные произведения)
 inline Vec3f barycentric_fast(const Vec3f *pts, const Vec3f &P) {
-    // Using cross to compute areas
+
     Vec3f A = { pts[1].x - pts[0].x, pts[1].y - pts[0].y, 0.0f };
     Vec3f B = { pts[2].x - pts[0].x, pts[2].y - pts[0].y, 0.0f };
     Vec3f C = { P.x - pts[0].x,     P.y - pts[0].y,     0.0f };
@@ -21,29 +19,26 @@ inline Vec3f barycentric_fast(const Vec3f *pts, const Vec3f &P) {
     float u = (C.x * B.y - C.y * B.x) / denom;
     float v = (A.x * C.y - A.y * C.x) / denom;
     float w = 1.0f - u - v;
-    return {w, u, v}; // corresponds to weights for pts[0], pts[1], pts[2]
+    return {w, u, v}; 
 }
 
 void triangle(Vec4f clip[3], IShader &shader, Image &image, std::vector<float> &zbuf) {
     const int W = image.width;
     const int H = image.height;
 
-    // === perspective divide ===
     Vec3f ndc[3];
     for (int i = 0; i < 3; i++) {
         float w = clip[i].w;
         ndc[i] = { clip[i].x / w, clip[i].y / w, clip[i].z / w };
     }
 
-    // === viewport transform ===
     Vec3f pts[3];
     for (int i = 0; i < 3; i++) {
         pts[i].x = int((ndc[i].x + 1.f) * 0.5f * W);
-        pts[i].y = int((ndc[i].y + 1.f) * 0.5f * H);
+        pts[i].y = int((-ndc[i].y + 1.f) * 0.5f * H);
         pts[i].z = 0.f;
     }
 
-    // bounding box
     int minx = W-1, miny = H-1;
     int maxx = 0,    maxy = 0;
     for (int i = 0; i < 3; i++) {
@@ -53,7 +48,6 @@ void triangle(Vec4f clip[3], IShader &shader, Image &image, std::vector<float> &
         maxy = std::min(H-1, std::max(maxy, int(pts[i].y)));
     }
 
-    // rasterization
     for (int y = miny; y <= maxy; y++) {
         for (int x = minx; x <= maxx; x++) {
 

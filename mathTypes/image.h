@@ -14,7 +14,7 @@ struct Image {
         data[y*width + x] = c;
     }
 
-    // Самый простой способ сохранить - формат PPM (без библиотек)
+    
     void savePPM(const char *filename) {
         std::ofstream f(filename, std::ios::binary);
         f << "P6\n" << width << " " << height << "\n255\n";

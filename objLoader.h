@@ -9,7 +9,7 @@
 struct Mesh {
     std::vector<Vec3f> positions;
     std::vector<Vec3f> normals;
-    std::vector<Vec2f> uvs;
+    std::vector<Vec2f> uvs; //текстурные координаты
     std::vector<int> indices; // треугольники: каждые 3 числа
 };
 
@@ -29,7 +29,7 @@ inline bool loadOBJ(const std::string &filename, Mesh &mesh)
     if (!err.empty())  std::cout << "ERR: " << err << "\n";
     if (!ret) return false;
 
-    // positions, normals, uvs we'll duplicate per-index
+
     mesh.positions.clear();
     mesh.normals.clear();
     mesh.uvs.clear();
@@ -37,11 +37,11 @@ inline bool loadOBJ(const std::string &filename, Mesh &mesh)
 
     for (auto &shape : shapes) {
         for (size_t f = 0; f < shape.mesh.indices.size(); f++) {
-            auto idx = shape.mesh.indices[f];
+            auto idx = shape.mesh.indices[f]; //разворот индексов в плоские массивы
 
             // vertex
             mesh.positions.push_back({
-                attrib.vertices[3 * idx.vertex_index + 0],
+                attrib.vertices[3 * idx.vertex_index + 0], //x,y,z
                 attrib.vertices[3 * idx.vertex_index + 1],
                 attrib.vertices[3 * idx.vertex_index + 2]
             });

@@ -4,32 +4,27 @@
 
 struct PhongShader : public IShader {
 
-    // Матрицы
     Mat4 Model      = Mat4::identity();
     Mat4 View       = Mat4::identity();
     Mat4 Projection = Mat4::identity();
-    Mat4 MVP        = Mat4::identity();   // Projection * View * Model
+    Mat4 MVP        = Mat4::identity(); //все вместе 
 
-    // Позиции света и камеры
     Vec3f lightPos  = {0,0,2};
     Vec3f cameraPos = {0,0,2};
 
-    // varying-переменные
     Vec3f varying_world_pos[3];
     Vec3f varying_normal[3];
 
-    // Внешние данные
     Vec3f *positions = nullptr;
     Vec3f *normals   = nullptr;
 
     int currentVertexIndex = 0;
 
-    // === VERTEX SHADER ===
     Vec4f vertex(int iface, int vertexID) override {
         Vec3f pos = positions[currentVertexIndex];
         Vec3f nor = normals[currentVertexIndex].normalize();
 
-        // сохраняем для интерполяции
+        //для интерполяции
         varying_world_pos[vertexID] = pos;
         varying_normal[vertexID]    = nor;
 
@@ -38,7 +33,6 @@ struct PhongShader : public IShader {
         return MVP * p;
     }
 
-    // === FRAGMENT SHADER ===
     bool fragment(const Vec3f &bar, Color &color) override {
         // интерполяция мировых координат
         Vec3f wp =
